@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -25,6 +26,27 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants">
+            <h5>Participants</h5>
+            <ul>
+              ${details.participants
+                .map(
+                  (participant) => `
+                    <li>
+                      <span>${participant}</span>
+                      <button
+                        type="button"
+                        class="remove-participant"
+                        data-activity="${encodeURIComponent(name)}"
+                        data-participant="${encodeURIComponent(participant)}"
+                        aria-label="Remove ${participant} from ${name}"
+                        title="Remove participant"
+                      >&#10005;</button>
+                    </li>`
+                )
+                .join("")}
+            </ul>
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -34,6 +56,31 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+
+      document.querySelectorAll(".remove-participant").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const activity = decodeURIComponent(button.dataset.activity);
+          const participant = decodeURIComponent(button.dataset.participant);
+
+          try {
+            const response = await fetch(
+              `/activities/${button.dataset.activity}/participants/${button.dataset.participant}`,
+              { method: "DELETE" }
+            );
+
+            if (!response.ok) {
+              throw new Error("Failed to remove participant");
+            }
+
+            await fetchActivities();
+          } catch (error) {
+            messageDiv.textContent = `Failed to remove ${participant} from ${activity}.`;
+            messageDiv.className = "error";
+            messageDiv.classList.remove("hidden");
+            console.error("Error removing participant:", error);
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
